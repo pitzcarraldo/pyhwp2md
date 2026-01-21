@@ -1,6 +1,6 @@
 """pyhwp2md - Convert HWP and HWPX files to Markdown."""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 from .converter import convert
 from .exceptions import ConversionError, FileTypeError, ParsingError, Pyhwp2mdError

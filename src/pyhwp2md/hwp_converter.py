@@ -40,6 +40,10 @@ class HwpToMarkdownConverter:
                 return self._convert_with_api()
 
             text = result.stdout
+            # If CLI returns empty output, try API method
+            if not text.strip():
+                return self._convert_with_api()
+
             return self._text_to_markdown(text)
 
         except subprocess.TimeoutExpired:
@@ -61,9 +65,11 @@ class HwpToMarkdownConverter:
                 # Process document sections
                 if hasattr(hwp, "bodytext"):
                     bodytext = hwp.bodytext
-                    if hasattr(bodytext, "section"):
-                        for section in bodytext.section:
-                            self._process_section(section, doc)
+                    # section_indexes() returns section indices
+                    if hasattr(bodytext, "section_indexes"):
+                        for idx in bodytext.section_indexes():
+                            section = bodytext.section(idx)
+                            self._process_section_models(section, doc)
             finally:
                 # Clean up
                 if hasattr(hwp, "close"):
@@ -72,6 +78,61 @@ class HwpToMarkdownConverter:
             return doc.render()
         except Exception as e:
             raise ParsingError(f"Failed to parse HWP file with API: {e}") from e
+
+    def _process_section_models(self, section, doc: MarkdownDocument):
+        """Process a section using models() to extract text."""
+        try:
+            models = list(section.models())
+            current_table_rows: list[list[str]] = []
+            current_row: list[str] = []
+            in_table = False
+
+            for model in models:
+                tagname = model.get("tagname", "")
+
+                if tagname == "HWPTAG_PARA_TEXT":
+                    content = model.get("content", {})
+                    chunks = content.get("chunks", [])
+
+                    para_texts = []
+                    for chunk in chunks:
+                        if len(chunk) >= 2:
+                            text_part = chunk[1]
+                            if isinstance(text_part, str):
+                                para_texts.append(text_part)
+
+                    if para_texts:
+                        text = "".join(para_texts).strip()
+                        if text:
+                            if in_table:
+                                # Accumulate text for table cell
+                                current_row.append(text)
+                            else:
+                                para = MarkdownParagraph()
+                                para.set_text(text)
+                                doc.add_element(para)
+
+                elif tagname == "HWPTAG_TABLE":
+                    in_table = True
+                    current_table_rows = []
+
+                elif tagname == "HWPTAG_LIST_HEADER":
+                    # List header indicates start of a new row or cell context
+                    content = model.get("content", {})
+                    # Check if this is a new row (simplified heuristic)
+                    if current_row and in_table:
+                        current_table_rows.append(current_row)
+                        current_row = []
+
+            # Finalize any remaining table
+            if in_table and current_table_rows:
+                table = MarkdownTable()
+                table.set_rows(current_table_rows)
+                doc.add_element(table)
+
+        except Exception:
+            # Continue on error
+            pass
 
     def _text_to_markdown(self, text: str) -> str:
         """Convert plain text to basic Markdown format."""
