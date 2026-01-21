@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyhwp2md"
-version = "0.1.0"
+version = "0.1.1"
 description = "Convert HWP and HWPX files to Markdown"
 readme = "README.md"
 license = {text = "MIT"}
@@ -32,6 +32,7 @@ classifiers = [
 dependencies = [
     "pyhwp>=0.1b12",
     "python-hwpx>=1.9",
+    "six",  # Required by pyhwp but not declared in its dependencies
 ]
 
 [project.optional-dependencies]
