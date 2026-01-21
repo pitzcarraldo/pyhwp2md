@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyhwp2md"
+version = "0.1.0"
+description = "Convert HWP and HWPX files to Markdown"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "pitzcarraldo"},
+]
+maintainers = [
+    {name = "pitzcarraldo"},
+]
+keywords = ["hwp", "hwpx", "markdown", "converter", "hancom"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: File Formats",
+]
+dependencies = [
+    "pyhwp>=0.1b12",
+    "python-hwpx>=1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.1",
+    "mypy>=1.7",
+]
+
+[project.scripts]
+pyhwp2md = "pyhwp2md.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/pitzcarraldo/pyhwp2md"
+Documentation = "https://github.com/pitzcarraldo/pyhwp2md#readme"
+Repository = "https://github.com/pitzcarraldo/pyhwp2md"
+Issues = "https://github.com/pitzcarraldo/pyhwp2md/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyhwp2md"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra -q"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
