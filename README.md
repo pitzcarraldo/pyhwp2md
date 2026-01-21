@@ -12,7 +12,7 @@ Convert HWP (Hangul Word Processor) and HWPX files to Markdown format.
 - 📝 Extracts text, paragraphs, and tables
 - 📊 Converts tables to Markdown pipe format
 - 🎯 Simple CLI interface
-- 🐍 Python 3.9+ support
+- 🐍 Python 3.10+ support
 
 ## Quick Start
 
