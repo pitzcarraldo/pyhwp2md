@@ -1,8 +1,9 @@
 """Convert HWP binary files to Markdown using pyhwp."""
 
+import io
+import subprocess
+import sys
 from pathlib import Path
-
-from hwp5.xmlmodel import Hwp5File
 
 from .exceptions import ParsingError
 from .markdown.elements import MarkdownDocument, MarkdownParagraph, MarkdownTable
@@ -26,17 +27,79 @@ class HwpToMarkdownConverter:
             ParsingError: If file cannot be parsed
         """
         try:
-            doc = MarkdownDocument()
+            # Use hwp5txt command-line tool for reliable text extraction
+            result = subprocess.run(
+                [sys.executable, "-m", "hwp5.hwp5txt", str(self.file_path)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
 
-            with Hwp5File(str(self.file_path)) as hwp:
+            if result.returncode != 0:
+                # Fallback to direct API if CLI fails
+                return self._convert_with_api()
+
+            text = result.stdout
+            return self._text_to_markdown(text)
+
+        except subprocess.TimeoutExpired:
+            raise ParsingError("HWP file conversion timed out")
+        except FileNotFoundError:
+            return self._convert_with_api()
+        except Exception as e:
+            raise ParsingError(f"Failed to parse HWP file: {e}") from e
+
+    def _convert_with_api(self) -> str:
+        """Fallback conversion using direct API."""
+        try:
+            from hwp5.xmlmodel import Hwp5File
+
+            doc = MarkdownDocument()
+            hwp = Hwp5File(str(self.file_path))
+
+            try:
                 # Process document sections
-                if hasattr(hwp, "bodytext") and hasattr(hwp.bodytext, "section"):
-                    for section_idx, section in enumerate(hwp.bodytext.section):
-                        self._process_section(section, doc)
+                if hasattr(hwp, "bodytext"):
+                    bodytext = hwp.bodytext
+                    if hasattr(bodytext, "section"):
+                        for section in bodytext.section:
+                            self._process_section(section, doc)
+            finally:
+                # Clean up
+                if hasattr(hwp, "close"):
+                    hwp.close()
 
             return doc.render()
         except Exception as e:
-            raise ParsingError(f"Failed to parse HWP file: {e}") from e
+            raise ParsingError(f"Failed to parse HWP file with API: {e}") from e
+
+    def _text_to_markdown(self, text: str) -> str:
+        """Convert plain text to basic Markdown format."""
+        if not text.strip():
+            return ""
+
+        doc = MarkdownDocument()
+        lines = text.split("\n")
+        current_paragraph = []
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped:
+                current_paragraph.append(stripped)
+            else:
+                if current_paragraph:
+                    para = MarkdownParagraph()
+                    para.set_text(" ".join(current_paragraph))
+                    doc.add_element(para)
+                    current_paragraph = []
+
+        # Add remaining paragraph
+        if current_paragraph:
+            para = MarkdownParagraph()
+            para.set_text(" ".join(current_paragraph))
+            doc.add_element(para)
+
+        return doc.render()
 
     def _process_section(self, section, doc: MarkdownDocument):
         """Process a section's content to extract text and tables."""

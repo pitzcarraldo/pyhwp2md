@@ -104,9 +104,9 @@ class HwpxToMarkdownConverter:
     def _extract_paragraph_text(self, para_info: ParagraphInfo) -> str:
         """Extract text from paragraph info."""
         try:
-            # Try to use the text method if available
-            if hasattr(para_info, "text"):
-                return para_info.text
+            # Try to use the text method if available (it's a method, not property)
+            if hasattr(para_info, "text") and callable(para_info.text):
+                return para_info.text()
             # Fallback to extracting from element
             element = para_info.element
             texts = []
